@@ -1,0 +1,14 @@
+{
+    "config": {
+        "step": {
+            "init": {
+                "description": "Enter the details gathered from your home.nest.com account",
+                "data": {
+                    "issue_token": "Issue token",
+                    "cookie": "Cookie",
+                    "region": "Region"
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,12 @@
+{
+    "domain": "nestga",
+    "name": "Nest GA",
+    "documentation": "",
+    "dependencies": [],
+    "config_flow": true,
+    "codeowners": [
+      "@nickbabenko"
+    ],
+    "homeassistant": "0.97.0"
+  }
+  
