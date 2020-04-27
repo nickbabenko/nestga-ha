@@ -337,7 +337,6 @@ class NestThermostat(ClimateDevice):
         return self._max_temperature
 
     def update(self):
-        _LOGGER.debug("update climate %s", self.device.name)
         """Cache value from Python-nest."""
         self._location = self.device.where
         self._name = self.device.name
@@ -357,5 +356,3 @@ class NestThermostat(ClimateDevice):
             self._temperature_scale = TEMP_CELSIUS
         else:
             self._temperature_scale = TEMP_FAHRENHEIT
-        
-        _LOGGER.debug('update climary %s %s %s %s %s', self._location, self._name, self._humidity, self._temperature, self.target_temperature)
