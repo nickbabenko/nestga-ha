@@ -296,7 +296,6 @@ class NestSensorDevice(Entity):
         """Initialize the sensor."""
         self.structure = structure
         self.variable = variable
-        _LOGGER.debug('device %s', nest)
         self._nest = nest
 
         if device is not None:
