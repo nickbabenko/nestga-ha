@@ -284,6 +284,9 @@ class NestDevice:
     def cameras(self):
         """Generate a list of cameras."""
         return self.nest.cameras
+    
+    def update(self):
+        self.nest.update()
 
 
 class NestSensorDevice(Entity):
@@ -293,6 +296,7 @@ class NestSensorDevice(Entity):
         """Initialize the sensor."""
         self.structure = structure
         self.variable = variable
+        _LOGGER.debug('device %s', nest)
         self._nest = nest
 
         if device is not None:
