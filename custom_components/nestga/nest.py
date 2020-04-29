@@ -117,7 +117,7 @@ class Nest(object):
         return self._storage.get(WHERE, id)
     
     def _should_update(self):
-        return self._last_update is None or self._last_update < datetime.timedelta(seconds=30)
+        return self._last_update is None or self._last_update < datetime.datetime.now() - datetime.timedelta(seconds=30)
     
     def update(self):
         if not self._should_update():
@@ -148,7 +148,7 @@ class Nest(object):
                         else:
                             item.set(sensor_data)
             
-            self._last_update = datetime.utcnow()
+            self._last_update = datetime.datetime.utcnow()
         except requests.exceptions.RequestException as e:
             _LOGGER.error(e)
             _LOGGER.error('Failed to update, trying again')
