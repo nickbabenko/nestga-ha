@@ -85,7 +85,8 @@ class Nest(object):
         self._access_token = access_token
         self._user_id = user_id
         self._storage = Storage()
-        self._update()
+        self._last_update = None
+        self.update()
     
     @property
     def structures(self):
@@ -115,7 +116,13 @@ class Nest(object):
     def where(self, id):
         return self._storage.get(WHERE, id)
     
-    def _update(self):
+    def _should_update(self):
+        return self._last_update is None or self._last_update < datetime.timedelta(seconds=30)
+    
+    def update(self):
+        if not self._should_update():
+            return
+
         try:
             response = self.post(
                 f"/api/0.1/user/{self._user_id}/app_launch",
@@ -140,6 +147,8 @@ class Nest(object):
                             self._storage.add(item_type, udid, item)
                         else:
                             item.set(sensor_data)
+            
+            self._last_update = datetime.utcnow()
         except requests.exceptions.RequestException as e:
             _LOGGER.error(e)
             _LOGGER.error('Failed to update, trying again')

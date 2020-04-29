@@ -108,7 +108,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         all_sensors = []
         for structure in nest.structures():
             all_sensors += [
-                NestBasicSensor(structure, None, variable)
+                NestBasicSensor(structure, None, variable, nest)
                 for variable in conditions
                 if variable in STRUCTURE_SENSOR_TYPES
             ]
@@ -116,19 +116,19 @@ async def async_setup_entry(hass, entry, async_add_entities):
         for device in nest.thermostats():
             structure = device.structure
             all_sensors += [
-                NestBasicSensor(structure, device, variable)
+                NestBasicSensor(structure, device, variable, nest)
                 for variable in conditions
                 if variable in SENSOR_TYPES
             ]
             all_sensors += [
-                NestTempSensor(structure, device, variable)
+                NestTempSensor(structure, device, variable, nest)
                 for variable in conditions
                 if variable in TEMP_SENSOR_TYPES
             ]
 
         for structure, device in nest.smoke_co_alarms():
             all_sensors += [
-                NestBasicSensor(structure, device, variable)
+                NestBasicSensor(structure, device, variable, nest)
                 for variable in conditions
                 if variable in PROTECT_SENSOR_TYPES
             ]
@@ -138,7 +138,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
             structures_has_camera[device.structure] = True
         for structure in structures_has_camera:
             all_sensors += [
-                NestBasicSensor(structure, None, variable)
+                NestBasicSensor(structure, None, variable, nest)
                 for variable in conditions
                 if variable in STRUCTURE_CAMERA_SENSOR_TYPES
             ]
@@ -151,17 +151,8 @@ async def async_setup_entry(hass, entry, async_add_entities):
 class NestBasicSensor(NestSensorDevice):
     """Representation a basic Nest sensor."""
 
-    @property
-    def state(self):
-        """Return the state of the sensor."""
-        return self._state
-
-    @property
-    def device_class(self):
-        """Return the device class of the sensor."""
-        return SENSOR_DEVICE_CLASSES.get(self.variable)
-
-    def update(self):
+    def __init__(self, structure, device, variable, nest):
+        super().__init__(structure, device, variable, nest)
         """Retrieve latest state."""
         self._unit = SENSOR_UNITS.get(self.variable)
 
@@ -176,12 +167,6 @@ class NestBasicSensor(NestSensorDevice):
             self._state = state.capitalize() if state is not None else None
         else:
             self._state = getattr(self.device, self.variable)
-        
-        _LOGGER.debug('sensor state %s %s', self.name, self._state)
-
-
-class NestTempSensor(NestSensorDevice):
-    """Representation of a Nest Temperature sensor."""
 
     @property
     def state(self):
@@ -191,9 +176,13 @@ class NestTempSensor(NestSensorDevice):
     @property
     def device_class(self):
         """Return the device class of the sensor."""
-        return DEVICE_CLASS_TEMPERATURE
+        return SENSOR_DEVICE_CLASSES.get(self.variable)
 
-    def update(self):
+class NestTempSensor(NestSensorDevice):
+    """Representation of a Nest Temperature sensor."""
+
+    def __init__(self, structure, device, variable, nest):
+        super().__init__(structure, device, variable, nest)
         """Retrieve latest state."""
         if self.device.temperature_scale == "C":
             self._unit = TEMP_CELSIUS
@@ -209,3 +198,13 @@ class NestTempSensor(NestSensorDevice):
                 self._state = f"{int(low)}-{int(high)}"
             else:
                 self._state = round(temp, 1)
+
+    @property
+    def state(self):
+        """Return the state of the sensor."""
+        return self._state
+
+    @property
+    def device_class(self):
+        """Return the device class of the sensor."""
+        return DEVICE_CLASS_TEMPERATURE

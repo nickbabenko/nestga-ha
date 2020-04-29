@@ -77,13 +77,14 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up the Nest climate device based on a config entry."""
     temp_unit = hass.config.units.temperature_unit
+    nest = hass.data[DATA_NEST]
 
-    thermostats = await hass.async_add_job(hass.data[DATA_NEST].thermostats)
+    thermostats = await hass.async_add_job(nest.thermostats)
 
     _LOGGER.debug('thermostats %s', thermostats)
 
     all_devices = [
-        NestThermostat(device.structure, device, temp_unit)
+        NestThermostat(device.structure, device, temp_unit, nest)
         for device in thermostats
     ]
 
@@ -93,8 +94,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
 class NestThermostat(ClimateDevice):
     """Representation of a Nest thermostat."""
 
-    def __init__(self, structure, device, temp_unit):
+    def __init__(self, structure, device, temp_unit, nest):
         """Initialize the thermostat."""
+        self._nest = nest
         self._unit = temp_unit
         self.structure = structure
         self.device = device
@@ -123,23 +125,25 @@ class NestThermostat(ClimateDevice):
         self._has_fan = self.device.has_fan
         if self._has_fan:
             self._support_flags = self._support_flags | SUPPORT_FAN_MODE
-
-        # data attributes
-        self._away = None
-        self._location = None
-        self._name = None
-        self._humidity = None
-        self._target_temperature = None
-        self._temperature = None
-        self._temperature_scale = None
-        self._mode = None
-        self._action = None
-        self._fan = None
-        self._eco_temperature = None
-        self._is_locked = None
-        self._locked_temperature = None
-        self._min_temperature = None
-        self._max_temperature = None
+    
+        self._location = self.device.where
+        self._name = self.device.name
+        self._humidity = self.device.humidity
+        self._temperature = self.device.temperature
+        self._mode = self.device.mode
+        self._action = self.device.hvac_state
+        self._target_temperature = self.device.target
+        self._fan = self.device.fan
+        self._away = self.structure.away == "away"
+        self._eco_temperature = self.device.eco_temperature
+        self._locked_temperature = self.device.locked_temperature
+        self._min_temperature = self.device.min_temperature
+        self._max_temperature = self.device.max_temperature
+        self._is_locked = self.device.is_locked
+        if self.device.temperature_scale == "C":
+            self._temperature_scale = TEMP_CELSIUS
+        else:
+            self._temperature_scale = TEMP_FAHRENHEIT
 
     @property
     def should_poll(self):
@@ -337,22 +341,4 @@ class NestThermostat(ClimateDevice):
         return self._max_temperature
 
     def update(self):
-        """Cache value from Python-nest."""
-        self._location = self.device.where
-        self._name = self.device.name
-        self._humidity = self.device.humidity
-        self._temperature = self.device.temperature
-        self._mode = self.device.mode
-        self._action = self.device.hvac_state
-        self._target_temperature = self.device.target
-        self._fan = self.device.fan
-        self._away = self.structure.away == "away"
-        self._eco_temperature = self.device.eco_temperature
-        self._locked_temperature = self.device.locked_temperature
-        self._min_temperature = self.device.min_temperature
-        self._max_temperature = self.device.max_temperature
-        self._is_locked = self.device.is_locked
-        if self.device.temperature_scale == "C":
-            self._temperature_scale = TEMP_CELSIUS
-        else:
-            self._temperature_scale = TEMP_FAHRENHEIT
+        self._nest.update()

@@ -81,7 +81,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         sensors = []
         for structure in nest.structures():
             sensors += [
-                NestBinarySensor(structure, None, variable)
+                NestBinarySensor(structure, None, variable, nest)
                 for variable in conditions
                 if variable in STRUCTURE_BINARY_TYPES
             ]
@@ -89,25 +89,25 @@ async def async_setup_entry(hass, entry, async_add_entities):
         for device in device_chain:
             structure = device.structure
             sensors += [
-                NestBinarySensor(structure, device, variable)
+                NestBinarySensor(structure, device, variable, nest)
                 for variable in conditions
                 if variable in BINARY_TYPES
             ]
             sensors += [
-                NestBinarySensor(structure, device, variable)
+                NestBinarySensor(structure, device, variable, nest)
                 for variable in conditions
                 if variable in CLIMATE_BINARY_TYPES and device.is_thermostat
             ]
 
             if device.is_camera:
                 sensors += [
-                    NestBinarySensor(structure, device, variable)
+                    NestBinarySensor(structure, device, variable, nest)
                     for variable in conditions
                     if variable in CAMERA_BINARY_TYPES
                 ]
                 for activity_zone in device.activity_zones:
                     sensors += [
-                        NestActivityZoneSensor(structure, device, activity_zone)
+                        NestActivityZoneSensor(structure, device, activity_zone, nest)
                     ]
 
         return sensors
@@ -117,6 +117,15 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 class NestBinarySensor(NestSensorDevice, BinarySensorDevice):
     """Represents a Nest binary sensor."""
+
+    def __init__(self, structure, device, zone, nest):
+        """Initialize the sensor."""
+        super().__init__(structure, device, "", nest)
+        value = getattr(self.device, self.variable)
+        if self.variable in STRUCTURE_BINARY_TYPES:
+            self._state = bool(STRUCTURE_BINARY_STATE_MAP[self.variable].get(value))
+        else:
+            self._state = bool(value)
 
     @property
     def is_on(self):
@@ -128,24 +137,15 @@ class NestBinarySensor(NestSensorDevice, BinarySensorDevice):
         """Return the device class of the binary sensor."""
         return _VALID_BINARY_SENSOR_TYPES.get(self.variable)
 
-    def update(self):
-        """Retrieve latest state."""
-        value = getattr(self.device, self.variable)
-        if self.variable in STRUCTURE_BINARY_TYPES:
-            self._state = bool(STRUCTURE_BINARY_STATE_MAP[self.variable].get(value))
-        else:
-            self._state = bool(value)
-        _LOGGER.debug('binary sensor state %r %s', self._state, self.name)
-
-
 class NestActivityZoneSensor(NestBinarySensor):
     """Represents a Nest binary sensor for activity in a zone."""
 
-    def __init__(self, structure, device, zone):
+    def __init__(self, structure, device, zone, nest):
         """Initialize the sensor."""
-        super().__init__(structure, device, "")
+        super().__init__(structure, device, "", nest)
         self.zone = zone
         self._name = f"{self._name} {self.zone.name} activity"
+        self._state = self.device.has_ongoing_motion_in_zone(self.zone.zone_id)
 
     @property
     def unique_id(self):
@@ -156,7 +156,3 @@ class NestActivityZoneSensor(NestBinarySensor):
     def device_class(self):
         """Return the device class of the binary sensor."""
         return "motion"
-
-    def update(self):
-        """Retrieve latest state."""
-        self._state = self.device.has_ongoing_motion_in_zone(self.zone.zone_id)

@@ -328,10 +328,11 @@ class NestDevice:
 class NestSensorDevice(Entity):
     """Representation of a Nest sensor."""
 
-    def __init__(self, structure, device, variable):
+    def __init__(self, structure, device, variable, nest):
         """Initialize the sensor."""
         self.structure = structure
         self.variable = variable
+        self._nest = nest
 
         if device is not None:
             # device specific
@@ -390,8 +391,7 @@ class NestSensorDevice(Entity):
         }
 
     def update(self):
-        """Do not use NestSensorDevice directly."""
-        raise NotImplementedError
+        self._nest.update()
 
     async def async_added_to_hass(self):
         """Register update signal handler."""

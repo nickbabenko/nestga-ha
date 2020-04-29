@@ -25,32 +25,40 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up a Nest sensor based on a config entry."""
-    structures = await hass.async_add_job(hass.data[DATA_NEST].structures)
-    camera_devices = await hass.async_add_job(hass.data[DATA_NEST].cameras)
+    nest = hass.data[DATA_NEST]
+    structures = await hass.async_add_job(nest.structures)
+    camera_devices = await hass.async_add_job(nest.cameras)
     _LOGGER.debug("Adding cameras %s", camera_devices)
-    cameras = [NestCamera(list(structures)[0], device, hass) for device in camera_devices]
+    cameras = [NestCamera(list(structures)[0], device, hass, nest) for device in camera_devices]
     async_add_entities(cameras, True)
 
 
 class NestCamera(Camera):
     """Representation of a Nest Camera."""
 
-    def __init__(self, structure, device, hass):
+    def __init__(self, structure, device, hass, nest):
         """Initialize a Nest Camera."""
         super().__init__()
-        _LOGGER.debug('camera device %s', device)
         self.structure = structure
         self.device = device
-        self._location = None
-        self._name = None
-        self._online = None
-        self._is_streaming = None
-        self._is_video_history_enabled = False
         # Default to non-NestAware subscribed, but will be fixed during update
-        self._time_between_snapshots = timedelta(seconds=30)
         self._last_image = None
         self._next_snapshot_at = None
         self._hass = hass
+        self._nest = nest
+
+        self._location = self.device.where
+        self._name = self.device.name
+        self._online = self.device.online
+        self._is_streaming = self.device.is_streaming
+        self._is_video_history_enabled = self.device.is_video_history_enabled
+
+        if self._is_video_history_enabled:
+            # NestAware allowed 10/min
+            self._time_between_snapshots = timedelta(seconds=6)
+        else:
+            # Otherwise, 2/min
+            self._time_between_snapshots = timedelta(seconds=30)
 
     @property
     def name(self):
@@ -118,19 +126,7 @@ class NestCamera(Camera):
         self.device.is_streaming = True
 
     def update(self):
-        """Cache value from Python-nest."""
-        self._location = self.device.where
-        self._name = self.device.name
-        self._online = self.device.online
-        self._is_streaming = self.device.is_streaming
-        self._is_video_history_enabled = self.device.is_video_history_enabled
-
-        if self._is_video_history_enabled:
-            # NestAware allowed 10/min
-            self._time_between_snapshots = timedelta(seconds=6)
-        else:
-            # Otherwise, 2/min
-            self._time_between_snapshots = timedelta(seconds=30)
+        self._nest.update()
 
     def _ready_for_snapshot(self, now):
         return self._next_snapshot_at is None or now > self._next_snapshot_at
