@@ -121,11 +121,13 @@ class NestBinarySensor(NestSensorDevice, BinarySensorDevice):
     def __init__(self, structure, device, zone, nest):
         """Initialize the sensor."""
         super().__init__(structure, device, "", nest)
-        value = getattr(self.device, self.variable)
-        if self.variable in STRUCTURE_BINARY_TYPES:
-            self._state = bool(STRUCTURE_BINARY_STATE_MAP[self.variable].get(value))
-        else:
-            self._state = bool(value)
+
+        if self.variable != "":
+            value = getattr(self.device, self.variable)
+            if self.variable in STRUCTURE_BINARY_TYPES:
+                self._state = bool(STRUCTURE_BINARY_STATE_MAP[self.variable].get(value))
+            else:
+                self._state = bool(value)
 
     @property
     def is_on(self):
