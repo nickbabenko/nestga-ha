@@ -135,8 +135,6 @@ class NestCamera(Camera):
         """Return a still image response from the camera."""
         now = utcnow()
         if self._ready_for_snapshot(now):
-            url = self.device.snapshot_url
-
             conf = self._hass.data[DATA_NEST_CONFIG]
             account_conf = conf["account"]
 
