@@ -108,10 +108,11 @@ class NestCamera(Camera):
     def turn_off(self):
         """Turn off camera."""
         _LOGGER.debug("Turn off camera %s", self._name)
-        # Calling Nest API in is_streaming setter.
-        # device.is_streaming would not immediately change until the process
-        # finished in Nest Cam.
-        self.device.is_streaming = False
+        self._nest.nest.dropcam.set_properties({
+            "streaming.enabled": False,
+            "uuid": self.device.id
+        })
+        self.update()
 
     def turn_on(self):
         """Turn on camera."""
@@ -120,10 +121,11 @@ class NestCamera(Camera):
             return
 
         _LOGGER.debug("Turn on camera %s", self._name)
-        # Calling Nest API in is_streaming setter.
-        # device.is_streaming would not immediately change until the process
-        # finished in Nest Cam.
-        self.device.is_streaming = True
+        self._nest.nest.dropcam.set_properties({
+            "streaming.enabled": True,
+            "uuid": self.device.id
+        })
+        self.update()
 
     def update(self):
         self._nest.update()

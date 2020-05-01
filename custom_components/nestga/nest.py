@@ -8,12 +8,12 @@ import datetime
 
 from dateutil.parser import parse as parse_time
 
+from .const import USER_AGENT
+from .dropcam import Dropcam
+
 _LOGGER = logging.getLogger(__name__)
 
 API_URL = "https://home.nest.com"
-USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) " \
-             "AppleWebKit/537.36 (KHTML, like Gecko) " \
-             "Chrome/75.0.3770.100 Safari/537.36"
 
 DEVICE = 'device'
 METADATA = 'metadata'
@@ -86,6 +86,7 @@ class Nest(object):
         self._user_id = user_id
         self._storage = Storage()
         self._last_update = None
+        self.dropcam = Dropcam(self._access_token)
         self.update()
     
     @property
@@ -124,6 +125,7 @@ class Nest(object):
             return
 
         try:
+            _LOGGER.debug('user id %s', self._user_id)
             response = self.post(
                 f"/api/0.1/user/{self._user_id}/app_launch",
                 {
@@ -189,11 +191,9 @@ class Storage(object):
         self._items = {}
     
     def get(self, type, id = None):
-        _LOGGER.debug('get device %s %s', type, id)
         if type in self._items:
             list = self._items[type]
         else:
-            _LOGGER.debug('no devices for type %s', type)
             list = {}
         if id is None:
             return list.values()
@@ -1070,11 +1070,13 @@ class Camera(Device):
 
     @property
     def is_streaming(self):
+        _LOGGER.debug('is streaming %s', self._data.get('streaming_state'))
         return self._data.get('streaming_state') == 'streaming-enabled'
     
     @property
     def online(self):
-        return self._data.get('streaming_state') == 'streaming-enabled'
+        return True # TODO: What changes when unplugged?
+        #return self._data.get('streaming_state') == 'streaming-enabled'
 
     @is_streaming.setter
     def is_streaming(self, value):

@@ -23,7 +23,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatche
 from homeassistant.helpers.entity import Entity
 
 from . import ga_auth
-from .const import DOMAIN
+from .const import DOMAIN, DATA_NEST_CONFIG, CONF_JWT, CONF_USER_ID
 
 _CONFIGURING = {}
 _LOGGER = logging.getLogger(__name__)
@@ -32,7 +32,6 @@ SERVICE_CANCEL_ETA = "cancel_eta"
 SERVICE_SET_ETA = "set_eta"
 
 DATA_NEST = "nestga"
-DATA_NEST_CONFIG = "nestga_config"
 
 SIGNAL_NEST_UPDATE = "nestga_update"
 
@@ -40,8 +39,6 @@ NEST_CONFIG_FILE = "nest.conf"
 CONF_ISSUE_TOKEN = "issue_token"
 CONF_COOKIE = "cookie"
 CONF_REGION = "region"
-CONF_USER_ID = "user_id"
-CONF_JWT = "jwt"
 
 ATTR_ETA = "eta"
 ATTR_ETA_WINDOW = "eta_window"
@@ -105,10 +102,9 @@ async def async_setup(hass, config):
 
     conf = config[DOMAIN]
     conf["account"] = {}
+    hass.data[DATA_NEST_CONFIG] = conf
 
-    user_id, jwt = await ga_auth.initialize(hass, conf[CONF_ISSUE_TOKEN], conf[CONF_COOKIE], conf[CONF_REGION])
-    conf["account"][CONF_USER_ID] = user_id
-    conf["account"][CONF_JWT] = jwt
+    await ga_auth.initialize(hass, conf[CONF_ISSUE_TOKEN], conf[CONF_COOKIE], conf[CONF_REGION])
 
     hass.async_create_task(
         hass.config_entries.flow.async_init(
@@ -116,9 +112,6 @@ async def async_setup(hass, config):
             context={"source": config_entries.SOURCE_IMPORT},
         )
     )
-
-    # Store config to be used during entry setup
-    hass.data[DATA_NEST_CONFIG] = conf
 
     return True
 
@@ -285,8 +278,14 @@ class NestDevice:
         """Generate a list of cameras."""
         return self.nest.cameras
     
-    def update(self):
-        self.nest.update()
+    def update(self, attempts = 0):
+        try:
+            self.nest.update()
+        except KeyError:
+            if attempts < 5:
+                conf = self.hass.data[DOMAIN]
+                ga_auth.initialize(self.hass, conf[CONF_ISSUE_TOKEN], conf[CONF_COOKIE], conf[CONF_REGION])
+                self.update(attempts + 1)
 
 
 class NestSensorDevice(Entity):

@@ -6,6 +6,8 @@ import logging
 
 _LOGGER = logging.getLogger(__name__)
 
+from .const import DATA_NEST_CONFIG, CONF_JWT, CONF_USER_ID
+
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) " \
              "AppleWebKit/537.36 (KHTML, like Gecko) " \
              "Chrome/75.0.3770.100 Safari/537.36"
@@ -13,10 +15,12 @@ URL_JWT = "https://nestauthproxyservice-pa.googleapis.com/v1/issue_jwt"
 NEST_API_KEY = "AIzaSyAdkSIMNc51XGNEAYWasX9UOWkS5P6sZE4"
 
 @callback
-def initialize(hass, issue_token, cookie, region):
+async def initialize(hass, issue_token, cookie, region):
     """Initialize a local auth provider."""
     access_token = get_access_token(issue_token, cookie)
-    return get_jwt(access_token)
+    user_id, jwt = get_jwt(access_token)
+    hass.data[DATA_NEST_CONFIG]["account"][CONF_JWT] = jwt
+    hass.data[DATA_NEST_CONFIG]["account"][CONF_USER_ID] = user_id
 
 def get_access_token(issue_token, cookie):
     headers = {
@@ -29,7 +33,7 @@ def get_access_token(issue_token, cookie):
     response = requests.get(url=issue_token, headers=headers)
     return response.json()['access_token']
 
-async def get_jwt(access_token):
+def get_jwt(access_token):
     """Authenticate with Google"""
     headers = {
         'User-Agent': USER_AGENT,
