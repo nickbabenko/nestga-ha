@@ -1105,7 +1105,6 @@ class Camera(Device):
 
     @property
     def is_streaming(self):
-        _LOGGER.debug('is streaming %s', self._data.get('streaming_state'))
         return self._data.get('streaming_state') == 'streaming-enabled'
     
     @property

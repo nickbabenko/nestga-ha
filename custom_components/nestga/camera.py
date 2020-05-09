@@ -28,7 +28,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
     nest = hass.data[DATA_NEST]
     structures = await hass.async_add_job(nest.structures)
     camera_devices = await hass.async_add_job(nest.cameras)
-    _LOGGER.debug("Adding cameras %s", camera_devices)
     cameras = [NestCamera(list(structures)[0], device, hass, nest) for device in camera_devices]
     async_add_entities(cameras, True)
 
@@ -141,6 +140,8 @@ class NestCamera(Camera):
                 f'&cachebuster={now}',
                 headers={"cookie": f'user_token={account_conf[CONF_JWT]}'},
             )
+
+            _LOGGER.debug('fetch camera image %d', response.status_code)
 
             self._next_snapshot_at = now + self._time_between_snapshots
             self._last_image = response.content
