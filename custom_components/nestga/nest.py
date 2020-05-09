@@ -13,7 +13,8 @@ from .dropcam import Dropcam
 
 _LOGGER = logging.getLogger(__name__)
 
-API_URL = "https://home.nest.com"
+API_URL = 'https://home.nest.com'
+ENDPOINT_SUBSCRIBE = '/v5/subscribe'
 
 DEVICE = 'device'
 METADATA = 'metadata'
@@ -81,11 +82,13 @@ def nest_object(type, id, data, nest_api):
     raise ValueError
 
 class Nest(object):
-    def __init__(self, access_token, user_id):
+    def __init__(self, access_token, user_id, transport_url):
         self._access_token = access_token
         self._user_id = user_id
+        self._transport_url = transport_url
         self._storage = Storage()
         self._last_update = None
+        self._objects = {}
         self.dropcam = Dropcam(self._access_token)
         self.update()
     
@@ -125,22 +128,45 @@ class Nest(object):
             return
 
         try:
-            _LOGGER.debug('user id %s', self._user_id)
-            response = self.post(
-                f"/api/0.1/user/{self._user_id}/app_launch",
-                {
-                    "known_bucket_types": list(BUCKETS.keys()),
-                    "known_bucket_versions": [],
+            has_objects = len(self._objects) > 0
+            uri = self._transport_url + ENDPOINT_SUBSCRIBE if has_objects else f"/api/0.1/user/{self._user_id}/app_launch"
+            _LOGGER.debug('update url %s', uri)
+            if len(self._objects) > 0:
+                body = {
+                    'objects': list(self._objects.values()),
                 }
+            else:
+                body = {
+                    'known_bucket_types': list(BUCKETS.keys()),
+                    'known_bucket_versions': [],
+                }
+            response = self.post(
+                uri,
+                body,
+                has_objects == False
             )
 
-            _LOGGER.debug('Fetched nest devices %d', len(response['updated_buckets']))
+            if 'updated_buckets' in response:
+                objects = response['updated_buckets']
 
-            for received_bucket in response["updated_buckets"]:
-                sensor_data = received_bucket["value"]
+            if 'objects' in response:
+                objects = response['objects']
+            
+            if not objects:
+                _LOGGER.warning('Invalid response from update. Key not found')
+
+            _LOGGER.debug('update response %s', objects)
+
+            for received_object in objects:
+                self._objects[received_object['object_key']] = {
+                    'object_key': received_object['object_key'],
+                    'object_revision': received_object['object_revision'],
+                    'object_timestamp': received_object['object_timestamp']
+                }
+                sensor_data = received_object['value']
                 for bucket in BUCKETS.keys():
-                    if received_bucket["object_key"].startswith(f"{bucket}."):
-                        udid = received_bucket["object_key"].replace(f"{bucket}.", "")
+                    if received_object['object_key'].startswith(f"{bucket}."):
+                        udid = received_object['object_key'].replace(f"{bucket}.", "")
                         item_type = BUCKETS[bucket]
                         item = self._storage.get(item_type, udid)
                         if item is None:
@@ -167,9 +193,13 @@ class Nest(object):
         except requests.exceptions.RequestException as e:
             _LOGGER.error(e)
     
-    def post(self, path, data):
+    def post(self, path, data, prefix_url = True):
+        if prefix_url:
+            url = API_URL + path
+        else:
+            url = path
         try:
-            response = requests.post(f"{API_URL}{path}", json=data, headers=self._default_headers())
+            response = requests.post(url, json=data, headers=self._default_headers())
             return self._handle_response(response)
         except requests.exceptions.RequestException as e:
             _LOGGER.error(e)

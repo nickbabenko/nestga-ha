@@ -13,7 +13,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.util.json import load_json
 
 from .const import DOMAIN, CONF_ISSUE_TOKEN, CONF_COOKIE, CONF_REGION
-from .ga_auth import get_access_token
+from .ga_auth import get_google_access_token
 
 DATA_FLOW_IMPL = "nest_ga_flow_implementation"
 _LOGGER = logging.getLogger(__name__)
@@ -105,5 +105,5 @@ class NestFlowHandler(config_entries.ConfigFlow):
         return self.async_create_entry(title="configuration.yaml", data={})
 
 def try_connection(issue_token, cookie):
-    access_token = get_access_token(issue_token, cookie)
+    access_token = get_google_access_token(issue_token, cookie)
     return access_token is not None

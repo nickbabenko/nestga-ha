@@ -2,6 +2,7 @@
 from datetime import datetime, timedelta
 import logging
 import threading
+import asyncio
 
 from .nest import Nest
 #from .nest.nest import APIError, AuthorizationError
@@ -23,7 +24,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatche
 from homeassistant.helpers.entity import Entity
 
 from . import ga_auth
-from .const import DOMAIN, DATA_NEST_CONFIG, CONF_JWT, CONF_USER_ID
+from .const import DOMAIN, DATA_NEST_CONFIG, CONF_JWT, CONF_USER_ID, CONF_TRANSPORT_URL
 
 _CONFIGURING = {}
 _LOGGER = logging.getLogger(__name__)
@@ -104,7 +105,7 @@ async def async_setup(hass, config):
     conf["account"] = {}
     hass.data[DATA_NEST_CONFIG] = conf
 
-    await ga_auth.initialize(hass, conf[CONF_ISSUE_TOKEN], conf[CONF_COOKIE], conf[CONF_REGION])
+    ga_auth.initialize(hass, conf[CONF_ISSUE_TOKEN], conf[CONF_COOKIE], conf[CONF_REGION])
 
     hass.async_create_task(
         hass.config_entries.flow.async_init(
@@ -124,6 +125,7 @@ async def async_setup_entry(hass, entry):
     nest = Nest(
         access_token=hass.data[DATA_NEST_CONFIG]["account"][CONF_JWT],
         user_id=hass.data[DATA_NEST_CONFIG]["account"][CONF_USER_ID],
+        transport_url=hass.data[DATA_NEST_CONFIG]["account"][CONF_TRANSPORT_URL],
     )
 
     _LOGGER.debug("proceeding with setup")
@@ -282,8 +284,9 @@ class NestDevice:
         try:
             self.nest.update()
         except KeyError:
+            _LOGGER.debug('update failed')
             if attempts < 5:
-                conf = self.hass.data[DOMAIN]
+                conf = self.hass.data[DATA_NEST_CONFIG]
                 ga_auth.initialize(self.hass, conf[CONF_ISSUE_TOKEN], conf[CONF_COOKIE], conf[CONF_REGION])
                 self.update(attempts + 1)
 
