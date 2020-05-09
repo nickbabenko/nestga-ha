@@ -47,19 +47,6 @@ class NestCamera(Camera):
         self._hass = hass
         self._nest = nest
 
-        self._location = self.device.where
-        self._name = self.device.name
-        self._online = self.device.online
-        self._is_streaming = self.device.is_streaming
-        self._is_video_history_enabled = self.device.is_video_history_enabled
-
-        if self._is_video_history_enabled:
-            # NestAware allowed 10/min
-            self._time_between_snapshots = timedelta(seconds=6)
-        else:
-            # Otherwise, 2/min
-            self._time_between_snapshots = timedelta(seconds=30)
-
     @property
     def name(self):
         """Return the name of the nest, if any."""
@@ -112,7 +99,6 @@ class NestCamera(Camera):
             "streaming.enabled": False,
             "uuid": self.device.id
         })
-        self.update()
 
     def turn_on(self):
         """Turn on camera."""
@@ -125,10 +111,20 @@ class NestCamera(Camera):
             "streaming.enabled": True,
             "uuid": self.device.id
         })
-        self.update()
 
     def update(self):
-        self._nest.update()
+        self._location = self.device.where
+        self._name = self.device.name
+        self._online = self.device.online
+        self._is_streaming = self.device.is_streaming
+        self._is_video_history_enabled = self.device.is_video_history_enabled
+
+        if self._is_video_history_enabled:
+            # NestAware allowed 10/min
+            self._time_between_snapshots = timedelta(seconds=6)
+        else:
+            # Otherwise, 2/min
+            self._time_between_snapshots = timedelta(seconds=30)
 
     def _ready_for_snapshot(self, now):
         return self._next_snapshot_at is None or now > self._next_snapshot_at

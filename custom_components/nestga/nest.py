@@ -5,7 +5,9 @@ import uuid
 import json
 import collections
 import datetime
+import threading
 
+from threading import Timer
 from dateutil.parser import parse as parse_time
 
 from .const import USER_AGENT
@@ -89,8 +91,13 @@ class Nest(object):
         self._storage = Storage()
         self._last_update = None
         self._objects = {}
+        self._update_event = threading.Event()
         self.dropcam = Dropcam(self._access_token)
         self.update()
+    
+    @property
+    def update_event(self):
+        return self._update_event
     
     @property
     def structures(self):
@@ -120,13 +127,7 @@ class Nest(object):
     def where(self, id):
         return self._storage.get(WHERE, id)
     
-    def _should_update(self):
-        return self._last_update is None or self._last_update < datetime.datetime.now() - datetime.timedelta(seconds=30)
-    
     def update(self):
-        if not self._should_update():
-            return
-
         try:
             has_objects = len(self._objects) > 0
             uri = self._transport_url + ENDPOINT_SUBSCRIBE if has_objects else f"/api/0.1/user/{self._user_id}/app_launch"
@@ -174,9 +175,13 @@ class Nest(object):
                             _LOGGER.info('Adding device %s %s %s', item_type, udid, item)
                             self._storage.add(item_type, udid, item)
                         else:
+                            _LOGGER.debug('updating device %s %s %s', item_type, udid, sensor_data)
                             item.set(sensor_data)
             
-            self._last_update = datetime.datetime.utcnow()
+            self._update_event.set()
+            
+            timer = Timer(1, self.update)
+            timer.start()
         except requests.exceptions.RequestException as e:
             _LOGGER.error(e)
             _LOGGER.error('Failed to update, trying again')

@@ -95,6 +95,24 @@ CANCEL_ETA_SCHEMA = vol.Schema(
     }
 )
 
+def nest_update_event_broker(hass, nest):
+    """
+    Dispatch SIGNAL_NEST_UPDATE to devices when nest stream API received data.
+    Runs in its own thread.
+    """
+    _LOGGER.debug("Listening for nest.update_event")
+
+    while hass.is_running:
+        nest.update_event.wait()
+
+        if not hass.is_running:
+            break
+
+        nest.update_event.clear()
+        _LOGGER.debug("Dispatching nest data update")
+        dispatcher_send(hass, SIGNAL_NEST_UPDATE)
+
+    _LOGGER.debug("Stop listening for nest.update_event")
 
 async def async_setup(hass, config):
     """Set up Nest components."""
@@ -234,6 +252,24 @@ async def async_setup_entry(hass, entry):
         DOMAIN, SERVICE_CANCEL_ETA, cancel_eta, schema=CANCEL_ETA_SCHEMA
     )
 
+    @callback
+    def start_up(event):
+        """Start Nest update event listener."""
+        threading.Thread(
+            name="Nest update listener",
+            target=nest_update_event_broker,
+            args=(hass, nest),
+        ).start()
+
+    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, start_up)
+
+    @callback
+    def shut_down(event):
+        """Stop Nest update event listener."""
+        nest.update_event.set()
+
+    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, shut_down)
+
     _LOGGER.debug("async_setup_nest is done")
 
     return True
@@ -355,9 +391,6 @@ class NestSensorDevice(Entity):
             "manufacturer": "Nest Labs",
             "model": model,
         }
-
-    def update(self):
-        self._nest.update()
 
     async def async_added_to_hass(self):
         """Register update signal handler."""

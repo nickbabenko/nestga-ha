@@ -125,25 +125,6 @@ class NestThermostat(ClimateDevice):
         self._has_fan = self.device.has_fan
         if self._has_fan:
             self._support_flags = self._support_flags | SUPPORT_FAN_MODE
-    
-        self._location = self.device.where
-        self._name = self.device.name
-        self._humidity = self.device.humidity
-        self._temperature = self.device.temperature
-        self._mode = self.device.mode
-        self._action = self.device.hvac_state
-        self._target_temperature = self.device.target
-        self._fan = self.device.fan
-        self._away = self.structure.away == "away"
-        self._eco_temperature = self.device.eco_temperature
-        self._locked_temperature = self.device.locked_temperature
-        self._min_temperature = self.device.min_temperature
-        self._max_temperature = self.device.max_temperature
-        self._is_locked = self.device.is_locked
-        if self.device.temperature_scale == "C":
-            self._temperature_scale = TEMP_CELSIUS
-        else:
-            self._temperature_scale = TEMP_FAHRENHEIT
 
     @property
     def should_poll(self):
@@ -341,4 +322,22 @@ class NestThermostat(ClimateDevice):
         return self._max_temperature
 
     def update(self):
-        self._nest.update()
+        _LOGGER.debug('update climate %s', self.device)
+        self._location = self.device.where
+        self._name = self.device.name
+        self._humidity = self.device.humidity
+        self._temperature = self.device.temperature
+        self._mode = self.device.mode
+        self._action = self.device.hvac_state
+        self._target_temperature = self.device.target
+        self._fan = self.device.fan
+        self._away = self.structure.away == "away"
+        self._eco_temperature = self.device.eco_temperature
+        self._locked_temperature = self.device.locked_temperature
+        self._min_temperature = self.device.min_temperature
+        self._max_temperature = self.device.max_temperature
+        self._is_locked = self.device.is_locked
+        if self.device.temperature_scale == "C":
+            self._temperature_scale = TEMP_CELSIUS
+        else:
+            self._temperature_scale = TEMP_FAHRENHEIT

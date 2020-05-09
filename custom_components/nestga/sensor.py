@@ -151,9 +151,17 @@ async def async_setup_entry(hass, entry, async_add_entities):
 class NestBasicSensor(NestSensorDevice):
     """Representation a basic Nest sensor."""
 
-    def __init__(self, structure, device, variable, nest):
-        super().__init__(structure, device, variable, nest)
-        """Retrieve latest state."""
+    @property
+    def state(self):
+        """Return the state of the sensor."""
+        return self._state
+
+    @property
+    def device_class(self):
+        """Return the device class of the sensor."""
+        return SENSOR_DEVICE_CLASSES.get(self.variable)
+    
+    def update(self):
         self._unit = SENSOR_UNITS.get(self.variable)
 
         if self.variable in VARIABLE_NAME_MAPPING:
@@ -168,6 +176,9 @@ class NestBasicSensor(NestSensorDevice):
         else:
             self._state = getattr(self.device, self.variable)
 
+class NestTempSensor(NestSensorDevice):
+    """Representation of a Nest Temperature sensor."""
+
     @property
     def state(self):
         """Return the state of the sensor."""
@@ -176,14 +187,9 @@ class NestBasicSensor(NestSensorDevice):
     @property
     def device_class(self):
         """Return the device class of the sensor."""
-        return SENSOR_DEVICE_CLASSES.get(self.variable)
-
-class NestTempSensor(NestSensorDevice):
-    """Representation of a Nest Temperature sensor."""
-
-    def __init__(self, structure, device, variable, nest):
-        super().__init__(structure, device, variable, nest)
-        """Retrieve latest state."""
+        return DEVICE_CLASS_TEMPERATURE
+    
+    def update(self):
         if self.device.temperature_scale == "C":
             self._unit = TEMP_CELSIUS
         else:
@@ -198,13 +204,3 @@ class NestTempSensor(NestSensorDevice):
                 self._state = f"{int(low)}-{int(high)}"
             else:
                 self._state = round(temp, 1)
-
-    @property
-    def state(self):
-        """Return the state of the sensor."""
-        return self._state
-
-    @property
-    def device_class(self):
-        """Return the device class of the sensor."""
-        return DEVICE_CLASS_TEMPERATURE
