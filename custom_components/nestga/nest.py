@@ -182,14 +182,8 @@ class Nest(object):
             
             timer = Timer(1, self.update)
             timer.start()
-        except requests.exceptions.RequestException as e:
-            _LOGGER.error(e)
-            _LOGGER.error('Failed to update, trying again')
-            raise e
-        except KeyError as e:
-            _LOGGER.error(e)
-            _LOGGER.debug('Failed to update, trying to log in again')
-            raise e
+        except Exception as e:
+            _LOGGER.debug('Failed to update, trying to log in again %s', e)
     
     def get(self, path):
         try:
@@ -206,8 +200,9 @@ class Nest(object):
         try:
             response = requests.post(url, json=data, headers=self._default_headers())
             return self._handle_response(response)
-        except requests.exceptions.RequestException as e:
-            _LOGGER.error(e)
+        except Exception as e:
+            _LOGGER.error('Failed to make request %s', e)
+            raise e
     
     def _handle_response(self, response):
         try:

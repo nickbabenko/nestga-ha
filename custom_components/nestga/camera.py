@@ -4,7 +4,9 @@ import logging
 
 import requests
 
-from . import DATA_NEST, DOMAIN, CONF_REGION, CONF_JWT, DATA_NEST_CONFIG
+from . import DATA_NEST, DOMAIN, DATA_NEST_CONFIG
+from .const import CONF_ISSUE_TOKEN, CONF_COOKIE, CONF_REGION, CONF_JWT
+from . import ga_auth
 from homeassistant.components.camera import PLATFORM_SCHEMA, SUPPORT_ON_OFF, Camera
 from homeassistant.util.dt import utcnow
 
@@ -135,6 +137,8 @@ class NestCamera(Camera):
             conf = self._hass.data[DATA_NEST_CONFIG]
             account_conf = conf["account"]
 
+            _LOGGER.debug('camera auth %s', account_conf[CONF_JWT])
+
             response = requests.get(
                 f'{CAMERA_URL.format(conf[CONF_REGION])}/get_image?uuid={self.device.id}' +
                 f'&cachebuster={now}',
@@ -143,7 +147,11 @@ class NestCamera(Camera):
 
             _LOGGER.debug('fetch camera image %d', response.status_code)
 
-            self._next_snapshot_at = now + self._time_between_snapshots
-            self._last_image = response.content
+            if (response.status_code == 200):
+                self._next_snapshot_at = now + self._time_between_snapshots
+                self._last_image = response.content
+            else:
+                conf = self._hass.data[DATA_NEST_CONFIG]
+                ga_auth.initialize(self._hass, conf[CONF_ISSUE_TOKEN], conf[CONF_COOKIE], conf[CONF_REGION])
 
         return self._last_image

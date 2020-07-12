@@ -70,6 +70,7 @@ def get_token(access_token):
         headers=headers
     )
     json = response.json()
+    _LOGGER.debug('get token response %s', json)
     transport_url = json['urls']['transport_url']
     userid = json['userid']
     return transport_url, userid

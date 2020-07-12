@@ -24,7 +24,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatche
 from homeassistant.helpers.entity import Entity
 
 from . import ga_auth
-from .const import DOMAIN, DATA_NEST_CONFIG, CONF_JWT, CONF_USER_ID, CONF_TRANSPORT_URL
+from .const import DOMAIN, DATA_NEST_CONFIG, CONF_JWT, CONF_USER_ID, CONF_TRANSPORT_URL, CONF_ISSUE_TOKEN, CONF_COOKIE, CONF_REGION
 
 _CONFIGURING = {}
 _LOGGER = logging.getLogger(__name__)
@@ -37,9 +37,6 @@ DATA_NEST = "nestga"
 SIGNAL_NEST_UPDATE = "nestga_update"
 
 NEST_CONFIG_FILE = "nest.conf"
-CONF_ISSUE_TOKEN = "issue_token"
-CONF_COOKIE = "cookie"
-CONF_REGION = "region"
 
 ATTR_ETA = "eta"
 ATTR_ETA_WINDOW = "eta_window"
